@@ -13,5 +13,5 @@ logs/
 *.swo
 *~
 client/node_modules/
-client/dist/
+# client/dist/  # Comentado para incluir build en el repo
 client/build/

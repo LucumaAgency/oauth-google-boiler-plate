@@ -1,0 +1,59 @@
+name: Deploy to Plesk
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install backend dependencies
+      run: npm ci --only=production
+    
+    - name: Install frontend dependencies and build
+      run: |
+        cd client
+        npm ci
+        npm run build
+        cd ..
+    
+    - name: Create deployment package
+      run: |
+        mkdir -p deploy
+        cp -r config models routes deploy/
+        cp app.js package.json package-lock.json deploy/
+        cp init-db.sql ecosystem.config.js deploy/
+        cp .env.example .htaccess deploy/
+        cp -r client/dist deploy/client/
+        cd deploy && tar -czf ../deploy.tar.gz .
+    
+    - name: Deploy to server via FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_HOST }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./deploy/
+        server-dir: /httpdocs/
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/node_modules/**
+          
+    - name: Restart Node.js App (if webhook configured)
+      run: |
+        if [ -n "${{ secrets.RESTART_WEBHOOK }}" ]; then
+          curl -X POST "${{ secrets.RESTART_WEBHOOK }}"
+        fi

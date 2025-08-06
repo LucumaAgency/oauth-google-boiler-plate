@@ -1,0 +1,18 @@
+# Node.js App Configuration for Plesk
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  
+  # Redirect all requests to Node.js app on port 5000
+  RewriteCond %{REQUEST_URI} !^/client
+  RewriteRule ^(.*)$ http://localhost:5000/$1 [P,L]
+  
+  # Serve React build files for production
+  RewriteCond %{REQUEST_URI} ^/client
+  RewriteRule ^client/(.*)$ /client/dist/$1 [L]
+</IfModule>
+
+# Security Headers
+Header set X-Content-Type-Options "nosniff"
+Header set X-Frame-Options "SAMEORIGIN"
+Header set X-XSS-Protection "1; mode=block"
+Header set Referrer-Policy "strict-origin-when-cross-origin"

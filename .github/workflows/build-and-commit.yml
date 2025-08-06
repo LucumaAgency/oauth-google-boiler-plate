@@ -1,11 +1,15 @@
- name: Build and Commit
+ name: Build Frontend and Commit
 
   on:
     push:
       branches: [ main ]
       paths-ignore:
         - 'client/dist/**'
+        - '.github/workflows/**'
     workflow_dispatch:
+
+  permissions:
+    contents: write
 
   jobs:
     build:
@@ -15,36 +19,31 @@
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
 
-      - name: Build frontend
+      - name: Install and Build
         run: |
           cd client
           npm ci
           npm run build
           cd ..
 
-      - name: Check for changes
-        id: check_changes
+      - name: Commit and Push build
         run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
           git add client/dist -f
-          git diff --staged --quiet || echo "changes=true" >> $GITHUB_OUTPUT
-
-      - name: Commit build files
-        if: steps.check_changes.outputs.changes == 'true'
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git commit -m "Build: Update production build [skip ci]"
-
-      - name: Push changes
-        if: steps.check_changes.outputs.changes == 'true'
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ github.ref }}
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "📦 Build: Update production build [skip ci]"
+            git push
+          fi

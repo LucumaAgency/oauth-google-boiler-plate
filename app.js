@@ -38,9 +38,19 @@ require('./config/passport')(passport);
 app.use('/auth', require('./routes/auth'));
 app.use('/api/user', require('./routes/user'));
 
-app.get('/', (req, res) => {
-  res.json({ message: 'OAuth Google Boilerplate API with MariaDB' });
-});
+// Serve static files from React build
+const path = require('path');
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'client/dist')));
+  
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'client/dist', 'index.html'));
+  });
+} else {
+  app.get('/', (req, res) => {
+    res.json({ message: 'OAuth Google Boilerplate API with MariaDB' });
+  });
+}
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
